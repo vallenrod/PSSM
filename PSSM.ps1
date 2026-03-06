@@ -91,15 +91,48 @@ function List-Startup {
     Write-Host "`nTotal: $($Global:StartupEntries.Count)`n"
 }
 
-function RemoveOrDisable-StartupItem {
-    $entryNum = Read-Host "Enter the entry number to remove/disable (or press Enter to cancel)"
+function Disable-RegistryItem {
+    # List only registry entries
+    $regItems = $Global:StartupEntries | Where-Object { $_.Type -like "Registry*" }
+    if($regItems.Count -eq 0){
+        Write-Host "No registry startup items to disable."
+        return
+    }
+
+    Write-Host "`nRegistry Startup Items:`n"
+    $i = 1
+    $regItems | ForEach-Object {
+        Write-Host ("[{0}] {1,-18} | {2,-20} | {3}" -f $i, $_.Type, $_.Name, $_.Command)
+        $i++
+    }
+
+    $entryNum = Read-Host "Enter the number of the registry item to disable (or Enter to cancel)"
     if(-not [int]::TryParse($entryNum,[ref]$null)){
-        Write-Host "Cancelled or invalid number."
+        Write-Host "Cancelled."
+        return
+    }
+    $entryNum = [int]$entryNum
+    if($entryNum -le 0 -or $entryNum -gt $regItems.Count){
+        Write-Host "Invalid number."
+        return
+    }
+
+    $item = $regItems[$entryNum-1]
+    $newName = "_DISABLED_$($item.Name)"
+    $path = if($item.Type -eq "Registry (CU)") { "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" } else { "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" }
+    Rename-ItemProperty -Path $path -Name $item.Name -NewName $newName
+    Write-Host "Disabled $($item.Name) (renamed to $newName)."
+}
+
+function Remove-StartupItem {
+    $entryNum = Read-Host "Enter the entry number to remove (or press Enter to cancel)"
+    if(-not [int]::TryParse($entryNum,[ref]$null)){
+        Write-Host "Cancelled."
         return
     }
     $entryNum = [int]$entryNum
     if($entryNum -le 0 -or $entryNum -gt $Global:StartupEntries.Count){
-        Write-Host "Invalid entry number."
+        Write-Host "Invalid number."
         return
     }
 
@@ -107,27 +140,12 @@ function RemoveOrDisable-StartupItem {
 
     switch ($item.Type){
         "Registry (CU)" {
-            $disableChoice = Read-Host "Do you want to (D)isable or (R)emove this entry? [D/R]"
-            if($disableChoice -match 'D'){
-                # Disable by renaming the key with prefix "_DISABLED_"
-                $newName = "_DISABLED_$($item.Name)"
-                Rename-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -NewName $newName
-                Write-Host "Disabled $($item.Name) (renamed to $newName)."
-            } else {
-                Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name
-                Write-Host "Removed $($item.Name) from Current User Registry Run."
-            }
+            Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -ErrorAction SilentlyContinue
+            Write-Host "Removed $($item.Name) from Current User Registry Run."
         }
         "Registry (LM)" {
-            $disableChoice = Read-Host "Do you want to (D)isable or (R)emove this entry? [D/R]"
-            if($disableChoice -match 'D'){
-                $newName = "_DISABLED_$($item.Name)"
-                Rename-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -NewName $newName
-                Write-Host "Disabled $($item.Name) (renamed to $newName)."
-            } else {
-                Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name
-                Write-Host "Removed $($item.Name) from Local Machine Registry Run."
-            }
+            Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -ErrorAction SilentlyContinue
+            Write-Host "Removed $($item.Name) from Local Machine Registry Run."
         }
         "Startup Folder (CU)" {
             Remove-Item $item.Command -ErrorAction SilentlyContinue
@@ -142,7 +160,7 @@ function RemoveOrDisable-StartupItem {
             Write-Host "Removed scheduled task $($item.Name)."
         }
         default {
-            Write-Host "Cannot remove or disable this item type: $($item.Type)"
+            Write-Host "Cannot remove this item type: $($item.Type)"
         }
     }
 }
@@ -153,8 +171,9 @@ function Show-Menu {
     Write-Host " PSSM - PowerShell Startup Manager"
     Write-Host "=============================="
     Write-Host "1. List startup items"
-    Write-Host "2. Remove or disable a startup item by number"
-    Write-Host "3. Exit"
+    Write-Host "2. Disable a registry startup item"
+    Write-Host "3. Remove a startup item"
+    Write-Host "4. Exit"
     Write-Host "=============================="
 }
 
@@ -163,12 +182,16 @@ function Show-Menu {
 # ----------------------------
 do {
     Show-Menu
-    $choice = Read-Host "Enter your choice (1-3)"
+    $choice = Read-Host "Enter your choice (1-4)"
+
+    # Refresh global entries each loop
+    Get-StartupItems
 
     switch ($choice){
         "1" { List-Startup; Pause }
-        "2" { List-Startup; RemoveOrDisable-StartupItem; Pause }
-        "3" { break }
+        "2" { Disable-RegistryItem; Pause }
+        "3" { Remove-StartupItem; Pause }
+        "4" { break }
         default { Write-Host "Invalid choice. Try again."; Pause }
     }
 } while ($true)

@@ -1,4 +1,4 @@
-PSSM is a simple script to manage startup items in Windows via PowerShell 
+PSSM v0.1 is a simple script to manage startup items in Windows via PowerShell 
 
 Execute it by running the following command:
 

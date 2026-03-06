@@ -2,7 +2,6 @@
 # PSSM - PowerShell Startup Manager
 # =========================
 
-# Global variable to hold startup entries
 $Global:StartupEntries = @()
 
 # ----------------------------
@@ -88,14 +87,13 @@ function List-Startup {
         Write-Host ("[{0}] {1,-20} | {2,-18} `n {3}" -f $i, $_.Type, $_.Name, $_.Command)
         $i++
     }
-    Write-Host "`nTotal: $($Global:StartupEntries.Count)`n Press Enter to return to the menu`n"
+    Write-Host "`nTotal: $($Global:StartupEntries.Count)`n"
 }
 
 function Disable-RegistryItem {
-    # List only registry entries
-    $regItems = $Global:StartupEntries | Where-Object { $_.Type -like "Registry*" }
+    $regItems = $Global:StartupEntries | Where-Object { $_.Type -like "Registry*" -and $_.Name -notlike "_DISABLED_*" }
     if($regItems.Count -eq 0){
-        Write-Host "No registry startup items to disable."
+        Write-Host "No registry startup items available to disable."
         return
     }
 
@@ -107,15 +105,9 @@ function Disable-RegistryItem {
     }
 
     $entryNum = Read-Host "Enter the number of the registry item to disable (or Enter to cancel)"
-    if(-not [int]::TryParse($entryNum,[ref]$null)){
-        Write-Host "Cancelled."
-        return
-    }
+    if(-not [int]::TryParse($entryNum,[ref]$null)){ Write-Host "Cancelled."; return }
     $entryNum = [int]$entryNum
-    if($entryNum -le 0 -or $entryNum -gt $regItems.Count){
-        Write-Host "Invalid number."
-        return
-    }
+    if($entryNum -le 0 -or $entryNum -gt $regItems.Count){ Write-Host "Invalid number."; return }
 
     $item = $regItems[$entryNum-1]
     $newName = "_DISABLED_$($item.Name)"
@@ -124,56 +116,57 @@ function Disable-RegistryItem {
     Write-Host "Disabled $($item.Name) (renamed to $newName)."
 }
 
+function Reenable-RegistryItem {
+    $disabledItems = $Global:StartupEntries | Where-Object { $_.Type -like "Registry*" -and $_.Name -like "_DISABLED_*" }
+    if($disabledItems.Count -eq 0){
+        Write-Host "No disabled registry items found."
+        return
+    }
+
+    Write-Host "`nDisabled Registry Items:`n"
+    $i = 1
+    $disabledItems | ForEach-Object {
+        Write-Host ("[{0}] {1,-18} | {2,-25} `n {3}" -f $i, $_.Type, $_.Name, $_.Command)
+        $i++
+    }
+
+    $entryNum = Read-Host "Enter the number of the item to re-enable (or Enter to cancel)"
+    if(-not [int]::TryParse($entryNum,[ref]$null)){ Write-Host "Cancelled."; return }
+    $entryNum = [int]$entryNum
+    if($entryNum -le 0 -or $entryNum -gt $disabledItems.Count){ Write-Host "Invalid number."; return }
+
+    $item = $disabledItems[$entryNum-1]
+    $newName = $item.Name -replace '^_DISABLED_', ''
+    $path = if($item.Type -eq "Registry (CU)") { "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" } else { "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" }
+    Rename-ItemProperty -Path $path -Name $item.Name -NewName $newName
+    Write-Host "Re-enabled $newName."
+}
+
 function Remove-StartupItem {
     $entryNum = Read-Host "Enter the entry number to remove (or press Enter to cancel)"
-    if(-not [int]::TryParse($entryNum,[ref]$null)){
-        Write-Host "Cancelled."
-        return
-    }
+    if(-not [int]::TryParse($entryNum,[ref]$null)){ Write-Host "Cancelled."; return }
     $entryNum = [int]$entryNum
-    if($entryNum -le 0 -or $entryNum -gt $Global:StartupEntries.Count){
-        Write-Host "Invalid number."
-        return
-    }
+    if($entryNum -le 0 -or $entryNum -gt $Global:StartupEntries.Count){ Write-Host "Invalid number."; return }
 
     $item = $Global:StartupEntries[$entryNum-1]
-
     switch ($item.Type){
-        "Registry (CU)" {
-            Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -ErrorAction SilentlyContinue
-            Write-Host "Removed $($item.Name) from Current User Registry Run."
-        }
-        "Registry (LM)" {
-            Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -ErrorAction SilentlyContinue
-            Write-Host "Removed $($item.Name) from Local Machine Registry Run."
-        }
-        "Startup Folder (CU)" {
-            Remove-Item $item.Command -ErrorAction SilentlyContinue
-            Write-Host "Removed $($item.Name) from Current User Startup folder."
-        }
-        "Startup Folder (All)" {
-            Remove-Item $item.Command -ErrorAction SilentlyContinue
-            Write-Host "Removed $($item.Name) from All Users Startup folder."
-        }
-        "Scheduled Task" {
-            schtasks /delete /tn $item.Name /f | Out-Null
-            Write-Host "Removed scheduled task $($item.Name)."
-        }
-        default {
-            Write-Host "Cannot remove this item type: $($item.Type)"
-        }
+        "Registry (CU)" { Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -ErrorAction SilentlyContinue; Write-Host "Removed $($item.Name) from Current User Registry Run." }
+        "Registry (LM)" { Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name $item.Name -ErrorAction SilentlyContinue; Write-Host "Removed $($item.Name) from Local Machine Registry Run." }
+        "Startup Folder (CU)" { Remove-Item $item.Command -ErrorAction SilentlyContinue; Write-Host "Removed $($item.Name) from Current User Startup folder." }
+        "Startup Folder (All)" { Remove-Item $item.Command -ErrorAction SilentlyContinue; Write-Host "Removed $($item.Name) from All Users Startup folder." }
+        "Scheduled Task" { schtasks /delete /tn $item.Name /f | Out-Null; Write-Host "Removed scheduled task $($item.Name)." }
+        default { Write-Host "Cannot remove this item type: $($item.Type)" }
     }
 }
 
 function Show-Menu {
     Clear-Host
-    Write-Host "=============================="
-    Write-Host " PSSM - PowerShell Startup Manager"
-    Write-Host "=============================="
+    Write-Host "==============================`n PSSM - PowerShell Startup Manager`n=============================="
     Write-Host "1. List startup items"
     Write-Host "2. Disable a registry startup item"
-    Write-Host "3. Remove a startup item"
-    Write-Host "4. Exit"
+    Write-Host "3. Re-enable a registry startup item"
+    Write-Host "4. Remove a startup item"
+    Write-Host "5. Exit"
     Write-Host "=============================="
 }
 
@@ -181,20 +174,17 @@ function Show-Menu {
 # Main Loop
 # ----------------------------
 $running = $true
-
 do {
     Show-Menu
-    $choice = Read-Host "Enter your choice (1-4)"
-
-    # Refresh global entries each loop
+    $choice = Read-Host "Enter your choice (1-5)"
     Get-StartupItems
 
     switch ($choice){
         "1" { List-Startup; Pause }
         "2" { Disable-RegistryItem; Pause }
-        "3" { Remove-StartupItem; Pause }
-        "4" { $running = $false }  # Set running to false to exit loop
+        "3" { Reenable-RegistryItem; Pause }
+        "4" { Remove-StartupItem; Pause }
+        "5" { $running = $false }
         default { Write-Host "Invalid choice. Try again."; Pause }
     }
 } while ($running)
-

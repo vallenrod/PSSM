@@ -85,7 +85,7 @@ function List-Startup {
     $i = 1
     $Global:StartupEntries | ForEach-Object {
         Write-Host ("[{0}] {1,-20} | {2,-18} `n {3}" -f $i, $_.Type, $_.Name, $_.Command)
-        Start-Sleep -Milliseconds 20
+        Start-Sleep -Milliseconds 40
         $i++
     }
     Write-Host "`nTotal: $($Global:StartupEntries.Count)`n Press Enter to return to main menu"
@@ -102,7 +102,7 @@ function Disable-RegistryItem {
     $i = 1
     $regItems | ForEach-Object {
         Write-Host ("[{0}] {1,-18} | {2,-20} `n {3}" -f $i, $_.Type, $_.Name, $_.Command)
-        Start-Sleep -Milliseconds 20
+        Start-Sleep -Milliseconds 40
         $i++
     }
 
@@ -129,7 +129,7 @@ function Reenable-RegistryItem {
     $i = 1
     $disabledItems | ForEach-Object {
         Write-Host ("[{0}] {1,-18} | {2,-25} `n {3}" -f $i, $_.Type, $_.Name, $_.Command)
-        Start-Sleep -Milliseconds 20
+        Start-Sleep -Milliseconds 40
         $i++
     }
 

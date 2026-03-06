@@ -1,12 +1,9 @@
-# =========================
-# PSSM - PowerShell Startup Manager
-# =========================
+# =====================================
+# PSSM 0.1 - PowerShell Startup Manager
+# =====================================
 
 $Global:StartupEntries = @()
 
-# ----------------------------
-# Functions
-# ----------------------------
 function Get-StartupItems {
     $entries = @()
 

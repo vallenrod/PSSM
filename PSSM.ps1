@@ -85,10 +85,10 @@ function List-Startup {
     Write-Host "`nStartup Items:`n"
     $i = 1
     $Global:StartupEntries | ForEach-Object {
-        Write-Host ("[{0}] {1,-20} | {2,-18} `n {3}`n`n" -f $i, $_.Type, $_.Name, $_.Command)
+        Write-Host ("[{0}] {1,-20} | {2,-18} `n {3}" -f $i, $_.Type, $_.Name, $_.Command)
         $i++
     }
-    Write-Host "`nTotal: $($Global:StartupEntries.Count)`n"
+    Write-Host "`nTotal: $($Global:StartupEntries.Count)`n Press Enter to return to the menu`n"
 }
 
 function Disable-RegistryItem {
@@ -102,7 +102,7 @@ function Disable-RegistryItem {
     Write-Host "`nRegistry Startup Items:`n"
     $i = 1
     $regItems | ForEach-Object {
-        Write-Host ("[{0}] {1,-18} | {2,-20} `n {3}`n`n" -f $i, $_.Type, $_.Name, $_.Command)
+        Write-Host ("[{0}] {1,-18} | {2,-20} `n {3}" -f $i, $_.Type, $_.Name, $_.Command)
         $i++
     }
 

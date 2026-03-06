@@ -164,13 +164,13 @@ function Remove-StartupItem {
 
 function Show-Menu {
     Clear-Host
-    Write-Host "==============================`n PSSM - PowerShell Startup Manager`n=============================="
+    Write-Host "====================================`n PSSM - PowerShell Startup Manager`n===================================="
     Write-Host "1. List startup items"
     Write-Host "2. Disable a registry startup item"
     Write-Host "3. Re-enable a registry startup item"
     Write-Host "4. Remove a startup item"
     Write-Host "5. Exit"
-    Write-Host "=============================="
+    Write-Host "===================================="
 }
 
 # ----------------------------

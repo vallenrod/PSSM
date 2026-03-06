@@ -180,6 +180,8 @@ function Show-Menu {
 # ----------------------------
 # Main Loop
 # ----------------------------
+$running = $true
+
 do {
     Show-Menu
     $choice = Read-Host "Enter your choice (1-4)"
@@ -191,7 +193,8 @@ do {
         "1" { List-Startup; Pause }
         "2" { Disable-RegistryItem; Pause }
         "3" { Remove-StartupItem; Pause }
-        "4" { break }
+        "4" { $running = $false }  # Set running to false to exit loop
         default { Write-Host "Invalid choice. Try again."; Pause }
     }
-} while ($true)
+} while ($running)
+

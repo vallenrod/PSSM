@@ -88,7 +88,7 @@ function List-Startup {
         Start-Sleep -Milliseconds 20
         $i++
     }
-    Write-Host "`nTotal: $($Global:StartupEntries.Count)`n"
+    Write-Host "`nTotal: $($Global:StartupEntries.Count)`n Press Enter to return to main menu"
 }
 
 function Disable-RegistryItem {
